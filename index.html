@@ -1,0 +1,31 @@
+<!DOCTYPE html>
+<html>
+    <head>
+        <script>
+           function getGps() {
+                navigator.geolocation.getCurrentPosition(function(location) {
+                    console.log("getCurrentPos");
+                    console.log(location.coords.latitude);
+                    console.log(location.coords.longitude);
+                    console.log(location.coords.accuracy);
+                    var gps = location.coords.latitude + ", " + location.coords.longitude;
+                    document.getElementById("gps").innerHTML = gps;
+                });
+            }
+        </script>
+    </head>
+    <body>
+
+        <h1>Web based Pokemon</h1>
+
+        <p>Your GPS is: </p>
+        <p id="gps"></p>
+
+        <button type="button"
+            onclick=getGps()>
+            Click me to get your GPS.</button>
+
+    </body>
+</html>
+
+

@@ -1,0 +1,107 @@
+<html>
+    <head>
+        <script>
+            function docId(id) {
+                return document.getElementById(id);
+            };
+            function getGps() {
+                navigator.geolocation.getCurrentPosition(function(location) {
+                    var gps = location.coords.latitude + ", " + location.coords.longitude;
+                    docId("location").value = gps;
+                })
+            };
+            function makeAjax(httpMethod, action, data, callback) {
+                var xmlHttp = new XMLHttpRequest();
+                xmlHttp.onreadystatechange = function() {
+                    if(xmlHttp.readyState == 4 && xmlHttp.status == 200) {
+                        callback(xmlHttp);
+                    }
+                }
+                xmlHttp.open(httpMethod, action); 
+                if (httpMethod.toLowerCase() == 'post') {
+                    xmlHttp.send(data); 
+                } else {
+                    xmlHttp.send(); 
+                }
+            };
+            function showElement(id) {
+                docId(id).style.display = 'block';
+            };
+            function hideElement(id) {
+                docId(id).style.display = 'none';
+            };
+            function start() {
+                hideElement('start_btn');
+                var form = document.querySelector('form');
+                var data = new FormData(form);
+                var elements = document.getElementsByClassName("start");
+                var formData = new FormData(); 
+                for(var i=0; i<elements.length; i++) {
+                    if (elements[i].type === 'radio') {
+                        if (elements[i].checked) {
+                            formData.append(elements[i].name, elements[i].value);
+                        }
+                    } else {
+                        formData.append(elements[i].name, elements[i].value);
+                    }
+                };
+                var callback = function(req) {
+                    var response = JSON.parse(req.responseText);
+                    var statusUrl = response.status_url;
+                    var taskId = response.task_id;
+                    showStopButton(taskId);
+                    updateStatus(statusUrl, taskId);
+                }
+                makeAjax("post", "start", data, callback);
+            };
+
+            function updateStatus(url, taskId) {
+                var callback = function(req) {
+                    var response = req.responseText;
+                    docId('status').innerHTML = '<p>'+response+'</p>';
+                    if (response.includes('Job not found')) {
+                        showElement('start_btn');
+                    } else {
+                        setTimeout( function(){updateStatus(url)}, 5000);
+                    }
+                }
+                makeAjax("get", url, '', callback);
+            }
+
+            function showStopButton(taskId) {
+                var callback = stop.bind(taskId);
+                var elem = docId("stop");
+                elem.innerHTML = '<button type="button" >Stop</button>';
+                elem.addEventListener('click', callback);
+            };
+
+            function stop(taskId) {
+                var callback = function(req) {
+                    var response = req.responseText
+                    var elem = docId("stop");
+                elem.innerHTML = '<p>' + response + '</p>';
+                }
+                makeAjax('get','stop/'+ taskId,'', callback);
+            };
+        </script>
+    </head>
+  <body>
+    <form method="POST" action="start">
+        <fieldset>
+            <legend>Login into your Pokemon-Go account</legend>
+            <input class="start" type="radio" name="provider" value="ptc"> PTC<br>
+            <input class="start" type="radio" name="provider" value="google" checked> Google<br>
+            <input class="start" type="text" name="username" placeholder="username" value="{{ username }}"><br>
+            <input class="start" type="password" placeholder="password" name="password"><br>
+            <input class="start" id="location" type="text" name="location" value="{{ gps }}">
+            <button type="button" onclick="getGps()">Use device GPS</button>
+            <br>
+            Password for this job: 
+            <input class="start" type="text" placeholder="token" name="token" value="{{ token }}"> <br>
+            <input type="submit" id="start_btn" name="Start/Status" value="Start" onclick="start(); return false;">
+        </fieldset>
+    </form>
+    <div id='status'></div>
+    <div id='stop'></div>
+</body>
+</html>
