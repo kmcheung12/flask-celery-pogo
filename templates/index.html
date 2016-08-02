@@ -57,9 +57,13 @@
 
             function updateStatus(url, taskId) {
                 var callback = function(req) {
-                    var response = req.responseText;
-                    docId('status').innerHTML = '<p>'+response+'</p>';
-                    if (response.includes('Job not found')) {
+                    console.log(req.responseText);
+                    var logs = JSON.parse(req.responseText).status;
+                    var logTxt = logs.join('\n');
+                    if (logTxt) {
+                        docId('status_log').value = logTxt;
+                    }
+                    if (logs.includes('Job not found')) {
                         showElement('start_btn');
                     } else {
                         setTimeout( function(){updateStatus(url)}, 30* 1000);
@@ -101,7 +105,9 @@
             <input type="submit" id="start_btn" name="Start/Status" value="Start" onclick="start(); return false;">
         </fieldset>
     </form>
-    <div id='status'></div>
     <div id='stop'></div>
+    <div id='status'>
+        <textarea id='status_log' style="width:100%; height:100%" readonly>Pending...</textarea>
+    </div>
 </body>
 </html>

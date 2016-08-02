@@ -4,7 +4,6 @@ import time
 from sets import Set
 from utils import distance
 from pokemongo_bot.human_behaviour import sleep
-from pokemongo_bot import logger
 
 class PokemonCatchWorker(object):
     BAG_FULL = 'bag_full'
@@ -19,6 +18,7 @@ class PokemonCatchWorker(object):
         self.pokemon_list = bot.pokemon_list
         self.item_list = bot.item_list
         self.inventory = bot.inventory
+        self.logger = bot.logger
 
     def work(self):
         encounter_id = self.pokemon['encounter_id']
@@ -33,7 +33,7 @@ class PokemonCatchWorker(object):
             if 'ENCOUNTER' in response_dict['responses']:
                 if 'status' in response_dict['responses']['ENCOUNTER']:
                     if response_dict['responses']['ENCOUNTER']['status'] is 7:
-                        logger.log('[x] Pokemon Bag is full!', 'red')
+                        self.logger.info('[x] Pokemon Bag is full!')
                         return PokemonCatchWorker.BAG_FULL
 
                     if response_dict['responses']['ENCOUNTER']['status'] is 1:
@@ -59,10 +59,10 @@ class PokemonCatchWorker(object):
                                                   'pokemon_id']) - 1
                                 pokemon_name = self.pokemon_list[
                                     int(pokemon_num)]['Name']
-                                logger.log('[#] A Wild {} appeared! [CP {}] [Potential {}]'.format(
-                                    pokemon_name, cp, pokemon_potential), 'yellow')
+                                self.logger.info('[#] A Wild {} appeared! [CP {}] [Potential {}]'.format(
+                                    pokemon_name, cp, pokemon_potential))
 
-                                logger.log('[#] IV [Stamina/Attack/Defense] = [{}/{}/{}]'.format(
+                                self.logger.info('[#] IV [Stamina/Attack/Defense] = [{}/{}/{}]'.format(
                                     pokemon['pokemon_data']['individual_stamina'],
                                     pokemon['pokemon_data']['individual_attack'],
                                     pokemon['pokemon_data']['individual_defense']
@@ -94,15 +94,15 @@ class PokemonCatchWorker(object):
                             # @TODO, use the best ball in stock to catch VIP (Very Important Pokemon: Configurable)
 
                             if pokeball is 0:
-                                logger.log(
-                                    '[x] Out of pokeballs, switching to farming mode...', 'red')
+                                self.logger.info(
+                                    '[x] Out of pokeballs, switching to farming mode...')
                                 # Begin searching for pokestops.
                                 self.config.mode = 'farm'
                                 return PokemonCatchWorker.NO_POKEBALLS
 
                             balls_stock[pokeball] = balls_stock[pokeball] - 1
                             success_percentage = '{0:.2f}'.format(catch_rate[pokeball-1]*100)
-                            logger.log('[x] Using {} (chance: {}%)... ({} left!)'.format(
+                            self.logger.info('[x] Using {} (chance: {}%)... ({} left!)'.format(
                                 self.item_list[str(pokeball)], 
                                 success_percentage, 
                                 balls_stock[pokeball]
@@ -125,20 +125,20 @@ class PokemonCatchWorker(object):
                                 status = response_dict['responses'][
                                     'CATCH_POKEMON']['status']
                                 if status is 2:
-                                    logger.log(
-                                        '[-] Attempted to capture {}- failed.. trying again!'.format(pokemon_name), 'red')
+                                    self.logger.info(
+                                        '[-] Attempted to capture {}- failed.. trying again!'.format(pokemon_name))
                                     sleep(2)
                                     continue
                                 if status is 3:
-                                    logger.log(
-                                        '[x] Oh no! {} vanished! :('.format(pokemon_name), 'red')
+                                    self.logger.info(
+                                        '[x] Oh no! {} vanished! :('.format(pokemon_name))
                                 if status is 1:
-                                    logger.log(
+                                    self.logger.info(
                                         '[x] Captured {}! [CP {}] [IV {}]'.format(
                                             pokemon_name,
                                             cp,
                                             pokemon_potential
-                                        ), 'green'
+                                        )
                                     )
 
                                     id_list2 = self.count_pokemon_inventory()
@@ -149,10 +149,10 @@ class PokemonCatchWorker(object):
                                         response_dict = self.api.call()
                                         status = response_dict['responses']['EVOLVE_POKEMON']['result']
                                         if status == 1:
-                                            logger.log(
-                                                    '[#] {} has been evolved!'.format(pokemon_name), 'green')
+                                            self.logger.info(
+                                                    '[#] {} has been evolved!'.format(pokemon_name))
                                         else:
-                                            logger.log(
+                                            self.logger.info(
                                             '[x] Failed to evolve {}!'.format(pokemon_name))
 
                                     if self.should_release_pokemon(pokemon_name, cp, pokemon_potential, response_dict):
@@ -164,11 +164,11 @@ class PokemonCatchWorker(object):
                                                 'Trying to transfer 0 pokemons!')
                                         self.transfer_pokemon(
                                             pokemon_to_transfer[0])
-                                        logger.log(
-                                            '[#] {} has been exchanged for candy!'.format(pokemon_name), 'green')
+                                        self.logger.info(
+                                            '[#] {} has been exchanged for candy!'.format(pokemon_name))
                                     else:
-                                        logger.log(
-                                        '[x] Captured {}! [CP {}]'.format(pokemon_name, cp), 'green')
+                                        self.logger.info(
+                                        '[x] Captured {}! [CP {}]'.format(pokemon_name, cp))
                             break
         time.sleep(5)
 
@@ -263,13 +263,13 @@ class PokemonCatchWorker(object):
                 'and': lambda x, y: x and y
             }
 
-            #logger.log(
+            #self.logger.info(
             #    "[x] Release config for {}: CP {} {} IV {}".format(
             #        pokemon_name,
             #        min_cp,
             #        cp_iv_logic,
             #        min_iv
-            #    ), 'yellow'
+            #    )
             #)
 
             return logic_to_function[cp_iv_logic](*release_results.values())

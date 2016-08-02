@@ -8,6 +8,8 @@ import argparse as ap
 from pokemongo_bot import PokemonGoBot
 import data
 import time
+from hashlib import sha256
+import logging
 
 from redis import Redis
 # Init Redis
@@ -26,6 +28,21 @@ celery = Celery(
         broker=app.config['CELERY_BROKER_URL'], 
         backend=app.config['CELERY_RESULT_BACKEND'])
 
+class RedisHandler(logging.Handler):
+    def __init__(self, host='localhost', history=2000):
+         logging.Handler.__init__(self)
+         self.redis = Redis(host)
+         self.formatter = logging.Formatter("%(asctime)s - %(message)s")
+         self.history = 2000
+         self.entries = 0
+
+    def emit(self, record):
+        self.redis.rpush(record.name, self.format(record))
+        self.entries += 1
+        if self.entries > 2 * self.history:
+            self.redis.ltrim(record.name, -self.history, -1)
+
+
 def set_config(profile):
     base_config = data.BASE_CONFIG
     base_config['username'] = profile.get('username', '')
@@ -33,7 +50,7 @@ def set_config(profile):
     base_config['token'] = profile.get('token', '')
     base_config['location'] = profile.get('location', '')
     # base_config['auth_service'] = profile.get('provider', '')
-    base_config['auth_service'] = profile.get('ptc', '')
+    base_config['auth_service'] = 'ptc'
 
     release_config = data.RELEASE_POKEMON
     ignores = data.IGNORE_POKEMON
@@ -59,30 +76,39 @@ def auto_play(self, profile, token):
     cfg = profile
     state = 'STARTED'
     self.update_state(state=state, meta={'status' : state})
+
+    logger = logging.getLogger(self.request.id+' log')
+    logger.setLevel(logging.INFO)
+    logger.addHandler(RedisHandler())
+
     try: 
-        for i in range(5):
-            gevent.sleep(5)
-            print self.request.id
-       # bot = PokemonGoBot(cfg)
-       # bot.start()
-       # bot.take_step()
+        bot = PokemonGoBot(cfg)
+        bot.setup_logging(logger)
+        bot.start()
+        bot.take_step()
         state = 'DONE'
-    except Exception as e:
+    except IOError as e:
         state = str(e)
     finally:
         print 'remove user job', token
         remove_user_job(profile.username, token)
     return {'status': state}
 
+def tokenHash(username, token):
+    return 'token-' + sha256(username + token).hexdigest()
+
+def userHash(username):
+    return 'user-' + sha256(username).hexdigest()
+
 def remove_user_job(username, token):
-    redis.delete(username, token)
+    redis.delete(userHash(username), tokenHash(username, token))
 
 def user_has_job(username, token):
-    return redis.execute_command('EXISTS', username) and redis.execute_command('EXISTS', token)
+    return redis.execute_command('EXISTS', userHash(username)) and redis.execute_command('EXISTS', tokenHash(username, token))
 
 def user_job(username, token):
     print redis.mget(username, token)
-    task_id = redis.get(token) if redis.get(username) == token else None
+    task_id = redis.get(tokenHash(username, token)) if redis.get(userHash(username)) == tokenHash(username, token) else None
     status_url = request.url_root + 'status/%s' % task_id
     return flask.jsonify({
         'status_url': status_url,
@@ -90,7 +116,7 @@ def user_job(username, token):
         })
 
 def remove_job(username, token):
-    redis.delete(username, token)
+    redis.delete(userHash(username), tokenHash(username, token))
 
 def start_new_job(form):
     username = form.get('username','')
@@ -100,8 +126,8 @@ def start_new_job(form):
         cfg = set_config(form)
         task = auto_play.delay(cfg, token)
         redis.msetnx({
-            username: token,
-            token: task.id
+            userHash(username): tokenHash(username, token),
+            tokenHash(username, token): task.id
             })
         status_url = request.url_root + 'status/%s' % task.id
         return flask.jsonify({
@@ -112,6 +138,12 @@ def start_new_job(form):
 def sessionInfo():
     print "get session info: " + str(session)
     return session['username'], session['token']
+
+def taskLog(taskId):
+    logId = taskId + ' log'
+    log = redis.lrange(logId, 0, 90)
+    redis.ltrim(logId, 100, -1)
+    return log
 
 @app.route('/', methods=['GET'])
 def index():
@@ -147,13 +179,12 @@ def status(task_id):
     username, token = sessionInfo()
     if user_has_job(username, token):
         try:
-            task = auto_play.AsyncResult(task_id)
-            status = task.info.get('status') if task.info else task.status
+            status = taskLog(task_id)
         except Exception as e:
             status = str(e)
     else:
         status = 'Job not found'
-    return 'status %s' % status
+    return flask.jsonify({'status': status})
 
 @app.route('/stop/<task_id>')
 def stop(task_id):

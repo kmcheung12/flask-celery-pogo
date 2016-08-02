@@ -13,14 +13,13 @@ from human_behaviour import sleep, random_lat_long_delta
 from cell_workers.utils import distance, i2f, format_time
 
 from pgoapi.utilities import f2i, h2f
-import logger
-
 
 class Stepper(object):
     def __init__(self, bot):
         self.bot = bot
         self.api = bot.api
         self.config = bot.config
+        self.logger = bot.logger
 
         self.pos = 1
         self.x = 0
@@ -38,10 +37,10 @@ class Stepper(object):
         self.api.set_position(*position)
         for step in range(self.steplimit2):
             # starting at 0 index
-            logger.log('[#] Scanning area for objects ({} / {})'.format(
+            self.logger.info('[#] Scanning area for objects ({} / {})'.format(
                 (step + 1), self.steplimit**2))
             if self.config.debug:
-                logger.log(
+                self.logger.info(
                     'steplimit: {} x: {} y: {} pos: {} dx: {} dy {}'.format(
                         self.steplimit2, self.x, self.y, self.pos, self.dx,
                         self.dy))
@@ -68,7 +67,7 @@ class Stepper(object):
         steps = (dist + 0.0) / (speed + 0.0)  # may be rational number
         intSteps = int(steps)
         residuum = steps - intSteps
-        logger.log('[#] Walking from ' + str((i2f(self.api._position_lat), i2f(
+        self.logger.info('[#] Walking from ' + str((i2f(self.api._position_lat), i2f(
             self.api._position_lng))) + " to " + str(str((lat, lng))) +
                    " for approx. " + str(format_time(ceil(steps))))
         if steps != 0:
@@ -89,7 +88,7 @@ class Stepper(object):
 
             self.api.set_position(lat, lng, alt)
             self.bot.heartbeat()
-            logger.log("[#] Finished walking")
+            self.logger.info("[#] Finished walking")
 
     def _work_at_position(self, lat, lng, alt, pokemon_only=False):
         cellid = self._get_cellid(lat, lng)

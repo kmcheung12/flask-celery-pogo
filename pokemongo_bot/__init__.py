@@ -3,7 +3,6 @@
 import logging
 import random
 import datetime
-import logger
 import re
 from pgoapi import PGoApi
 from cell_workers import PokemonCatchWorker, SeenFortWorker, MoveToFortWorker, InitialTransferWorker, EvolveAllWorker
@@ -22,11 +21,14 @@ class PokemonGoBot(object):
         self.item_list = config.items
 
     def start(self):
-        self._setup_logging()
         self._setup_api()
         self.stepper = Stepper(self)
         random.seed()
 
+    def setup_logging(self, logger):
+        self._setup_logging()
+        self.logger = logger
+    
     def take_step(self):
         self.stepper.take_step()
 
@@ -43,7 +45,7 @@ class PokemonGoBot(object):
         if (self.config.mode == "all" or self.config.mode ==
                 "poke") and 'catchable_pokemons' in cell and len(cell[
                     'catchable_pokemons']) > 0:
-            logger.log('[#] Something rustles nearby!')
+            self.logger.info('[#] Something rustles nearby!')
             # Sort all by distance from current pos- eventually this should
             # build graph & A* it
             cell['catchable_pokemons'].sort(
@@ -84,7 +86,6 @@ class PokemonGoBot(object):
                         break
 
     def _setup_logging(self):
-        self.log = logging.getLogger(__name__)
         # log settings
         # log format
         logging.basicConfig(
@@ -110,7 +111,7 @@ class PokemonGoBot(object):
         if not self.api.login(self.config.auth_service,
                               str(self.config.username),
                               str(self.config.password)):
-            logger.log('Login Error, server busy', 'red')
+            self.logger.error('Login Error, server busy', 'red')
             exit(0)
 
         # chain subrequests (methods) into one RPC call
@@ -139,18 +140,18 @@ class PokemonGoBot(object):
         if 'amount' in player['currencies'][1]:
             stardust = player['currencies'][1]['amount']
 
-        logger.log('[#] Username: {username}'.format(**player))
-        logger.log('[#] Acccount Creation: {}'.format(creation_date))
-        logger.log('[#] Bag Storage: {}/{}'.format(
+        self.logger.info('[#] Username: {username}'.format(**player))
+        self.logger.info('[#] Acccount Creation: {}'.format(creation_date))
+        self.logger.info('[#] Bag Storage: {}/{}'.format(
             self.get_inventory_count('item'), player['max_item_storage']))
-        logger.log('[#] Pokemon Storage: {}/{}'.format(
+        self.logger.info('[#] Pokemon Storage: {}/{}'.format(
             self.get_inventory_count('pokemon'), player[
                 'max_pokemon_storage']))
-        logger.log('[#] Stardust: {}'.format(stardust))
-        logger.log('[#] Pokecoins: {}'.format(pokecoins))
-        logger.log('[#] PokeBalls: ' + str(balls_stock[1]))
-        logger.log('[#] GreatBalls: ' + str(balls_stock[2]))
-        logger.log('[#] UltraBalls: ' + str(balls_stock[3]))
+        self.logger.info('[#] Stardust: {}'.format(stardust))
+        self.logger.info('[#] Pokecoins: {}'.format(pokecoins))
+        self.logger.info('[#] PokeBalls: ' + str(balls_stock[1]))
+        self.logger.info('[#] GreatBalls: ' + str(balls_stock[2]))
+        self.logger.info('[#] UltraBalls: ' + str(balls_stock[3]))
 
         self.get_player_info()
 
@@ -158,7 +159,7 @@ class PokemonGoBot(object):
             worker = InitialTransferWorker(self)
             worker.work()
 
-        logger.log('[#]')
+        self.logger.info('[#]')
         self.update_inventory()
 
     def catch_pokemon(self, pokemon):
@@ -263,14 +264,14 @@ class PokemonGoBot(object):
                 location = (self._get_pos_by_name(location_str.replace(" ", "")))
                 self.position = location
                 self.api.set_position(*self.position)
-                logger.log('')
-                logger.log(u'[x] Address found: {}'.format(self.config.location.decode(
+                self.logger.info('')
+                self.logger.info(u'[x] Address found: {}'.format(self.config.location.decode(
                     'utf-8')))
-                logger.log('[x] Position in-game set as: {}'.format(self.position))
-                logger.log('')
+                self.logger.info('[x] Position in-game set as: {}'.format(self.position))
+                self.logger.info('')
                 return
             except:
-                logger.log('[x] The location given using -l could not be parsed.')
+                self.logger.info('[x] The location given using -l could not be parsed.')
                 pass
         else:
             raise ValueError("No usable location")
@@ -281,7 +282,7 @@ class PokemonGoBot(object):
             possibleCoordinates = re.findall("[-]?\d{1,3}[.]\d{6,7}", location_name)
             if len(possibleCoordinates) == 2:
                 # 2 matches, this must be a coordinate. We'll bypass the Google geocode so we keep the exact location.
-                logger.log(
+                self.logger.info(
                     '[x] Coordinates found in passed in location, not geocoding.')
                 return (float(possibleCoordinates[0]), float(possibleCoordinates[1]), float("0.0"))
             else:
@@ -387,24 +388,24 @@ class PokemonGoBot(object):
                                         int(playerdata.get('experience', 0)))
 
                                     if 'level' in playerdata:
-                                        logger.log(
+                                        self.logger.info(
                                             '[#] -- Level: {level}'.format(
                                                 **playerdata))
 
                                     if 'experience' in playerdata:
-                                        logger.log(
+                                        self.logger.info(
                                             '[#] -- Experience: {experience}'.format(
                                                 **playerdata))
-                                        logger.log(
+                                        self.logger.info(
                                             '[#] -- Experience until next level: {}'.format(
                                                 nextlvlxp))
 
                                     if 'pokemons_captured' in playerdata:
-                                        logger.log(
+                                        self.logger.info(
                                             '[#] -- Pokemon Captured: {pokemons_captured}'.format(
                                                 **playerdata))
 
                                     if 'poke_stop_visits' in playerdata:
-                                        logger.log(
+                                        self.logger.info(
                                             '[#] -- Pokestops Visited: {poke_stop_visits}'.format(
                                                 **playerdata))

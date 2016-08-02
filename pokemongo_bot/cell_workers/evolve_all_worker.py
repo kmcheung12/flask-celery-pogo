@@ -1,6 +1,5 @@
 from utils import distance, format_dist
 from pokemongo_bot.human_behaviour import sleep
-from pokemongo_bot import logger
 from sets import Set
 
 class EvolveAllWorker(object):
@@ -8,6 +7,7 @@ class EvolveAllWorker(object):
         self.api = bot.api
         self.config = bot.config
         self.bot = bot
+        self.logger = bot.logger
         # self.position = bot.position
 
     def work(self):
@@ -71,8 +71,8 @@ class EvolveAllWorker(object):
                 if self.should_release_pokemon(pokemon_name, pokemon_cp, pokemon_potential):
                     # Transfering Pokemon
                     self.transfer_pokemon(pokemon_id)
-                    logger.log(
-                        '[#] {} has been exchanged for candy!'.format(pokemon_name), 'green')
+                    self.logger.info(
+                        '[#] {} has been exchanged for candy!'.format(pokemon_name))
 
     def _sort_by_cp(self, inventory_items):
         pokemons = []
@@ -183,13 +183,13 @@ class EvolveAllWorker(object):
                 'and': lambda x, y: x and y
             }
 
-            #logger.log(
+            #self.logger.info(
             #    "[x] Release config for {}: CP {} {} IV {}".format(
             #        pokemon_name,
             #        min_cp,
             #        cp_iv_logic,
             #        min_iv
-            #    ), 'yellow'
+            #    )
             #)
 
             return logic_to_function[cp_iv_logic](*release_results.values())
