@@ -62,17 +62,18 @@
                     if (response.includes('Job not found')) {
                         showElement('start_btn');
                     } else {
-                        setTimeout( function(){updateStatus(url)}, 5000);
+                        setTimeout( function(){updateStatus(url)}, 30* 1000);
                     }
                 }
                 makeAjax("get", url, '', callback);
             }
 
             function showStopButton(taskId) {
-                var callback = stop.bind(taskId);
                 var elem = docId("stop");
                 elem.innerHTML = '<button type="button" >Stop</button>';
-                elem.addEventListener('click', callback);
+                elem.addEventListener('click', function() {
+                    stop(taskId);
+                });
             };
 
             function stop(taskId) {
@@ -89,8 +90,7 @@
     <form method="POST" action="start">
         <fieldset>
             <legend>Login into your Pokemon-Go account</legend>
-            <input class="start" type="radio" name="provider" value="ptc"> PTC<br>
-            <input class="start" type="radio" name="provider" value="google" checked> Google<br>
+            <input class="start" type="radio" name="provider" value="ptc" checked> PTC<br>
             <input class="start" type="text" name="username" placeholder="username" value="{{ username }}"><br>
             <input class="start" type="password" placeholder="password" name="password"><br>
             <input class="start" id="location" type="text" name="location" value="{{ gps }}">

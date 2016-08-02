@@ -1,14 +1,13 @@
 import flask
 from flask import request, render_template, session
 from celery import Celery
-from gevent.wsgi import WSGIServer
+from gevent.pywsgi import WSGIServer
 import gevent
 import subprocess
 import argparse as ap
 from pokemongo_bot import PokemonGoBot
 import data
 import time
-import gevent
 
 from redis import Redis
 # Init Redis
@@ -20,6 +19,7 @@ app = flask.Flask(__name__)
 # Celery configuration
 app.config['CELERY_BROKER_URL'] = 'redis://localhost:6379/0'
 app.config['CELERY_RESULT_BACKEND'] = 'redis://localhost:6379/0'
+app.config['CELERYD_PREFETCH_MULTIPLIER'] = 0
 
 celery = Celery(
         app.name, 
@@ -32,7 +32,8 @@ def set_config(profile):
     base_config['password'] = profile.get('password', '')
     base_config['token'] = profile.get('token', '')
     base_config['location'] = profile.get('location', '')
-    base_config['auth_service'] = profile.get('provider', '')
+    # base_config['auth_service'] = profile.get('provider', '')
+    base_config['auth_service'] = profile.get('ptc', '')
 
     release_config = data.RELEASE_POKEMON
     ignores = data.IGNORE_POKEMON
@@ -59,13 +60,17 @@ def auto_play(self, profile, token):
     state = 'STARTED'
     self.update_state(state=state, meta={'status' : state})
     try: 
-        bot = PokemonGoBot(cfg)
-        bot.start()
-        bot.take_step()
+        for i in range(5):
+            gevent.sleep(5)
+            print self.request.id
+       # bot = PokemonGoBot(cfg)
+       # bot.start()
+       # bot.take_step()
         state = 'DONE'
     except Exception as e:
         state = str(e)
     finally:
+        print 'remove user job', token
         remove_user_job(profile.username, token)
     return {'status': state}
 
@@ -73,7 +78,7 @@ def remove_user_job(username, token):
     redis.delete(username, token)
 
 def user_has_job(username, token):
-    return redis.execute_command('EXISTS', username, token)
+    return redis.execute_command('EXISTS', username) and redis.execute_command('EXISTS', token)
 
 def user_job(username, token):
     print redis.mget(username, token)
