@@ -99,28 +99,6 @@ class Stepper(object):
                                  cell_id=cellid)
 
         response_dict = self.api.call()
-        # pprint.pprint(response_dict)
-        # Passing Variables through a file
-        if response_dict and 'responses' in response_dict:
-            if 'GET_MAP_OBJECTS' in response_dict['responses']:
-                if 'map_cells' in response_dict['responses'][
-                        'GET_MAP_OBJECTS']:
-                    user_web_location = 'web/location-%s.json' % (self.config.username)
-                    if os.path.isfile(user_web_location):
-                        with open(user_web_location, 'w') as outfile:
-                            json.dump(
-                                {'lat': lat,
-                                'lng': lng,
-                                'cells': response_dict[
-                                    'responses']['GET_MAP_OBJECTS']['map_cells']},
-                                outfile)
-
-                    user_data_lastlocation = 'data/last-location-%s.json' % (self.config.username)
-                    if os.path.isfile(user_data_lastlocation):
-                        with open(user_data_lastlocation, 'w') as outfile:
-                            outfile.truncate()
-                            json.dump({'lat': lat, 'lng': lng}, outfile)
-
         if response_dict and 'responses' in response_dict:
             if 'GET_MAP_OBJECTS' in response_dict['responses']:
                 if 'status' in response_dict['responses']['GET_MAP_OBJECTS']:

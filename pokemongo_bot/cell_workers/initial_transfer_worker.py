@@ -50,10 +50,6 @@ class InitialTransferWorker(object):
         inventory_dict = inventory_req['responses']['GET_INVENTORY'][
             'inventory_delta']['inventory_items']
 
-        user_web_inventory = 'web/inventory-%s.json' % (self.config.username)
-        with open(user_web_inventory, 'w') as outfile:
-            json.dump(inventory_dict, outfile)
-
         for pokemon in inventory_dict:
             try:
                 reduce(dict.__getitem__, [
