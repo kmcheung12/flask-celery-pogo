@@ -6,6 +6,7 @@ import gevent
 import subprocess
 import argparse as ap
 from pokemongo_bot import PokemonGoBot
+from pgoapi.exceptions import NotLoggedInException
 import data
 import time
 from hashlib import sha256
@@ -74,6 +75,7 @@ def add_five_times(self, x, y):
 @celery.task(bind=True)
 def auto_play(self, profile, token):
     cfg = profile
+    user = profile.username
     state = 'STARTED'
     self.update_state(state=state, meta={'status' : state})
 
@@ -81,17 +83,23 @@ def auto_play(self, profile, token):
     logger.setLevel(logging.INFO)
     logger.addHandler(RedisHandler())
 
-    try: 
-        bot = PokemonGoBot(cfg)
-        bot.setup_logging(logger)
-        bot.start()
-        bot.take_step()
-        state = 'DONE'
-    except IOError as e:
-        state = str(e)
+    def run_bot():
+        try: 
+            bot = PokemonGoBot(cfg)
+            bot.setup_logging(logger)
+            bot.start()
+            while True:
+                bot.take_step()
+        except KeyError:
+            logger.info('Pokemon server return incomplete data. Re-login')
+        except NotLoggedInException:
+            logger.info('Token expired. Re-login')
+    try:
+        for i in range(10):
+            run_bot()
     finally:
-        print 'remove user job', token
-        remove_user_job(profile.username, token)
+        logger.info( 'remove user job: %s'% token)
+        remove_user_job(user, token)
     return {'status': state}
 
 def tokenHash(username, token):

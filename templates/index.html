@@ -84,8 +84,9 @@
                 var callback = function(req) {
                     var response = req.responseText
                     var elem = docId("stop");
-                elem.innerHTML = '<p>' + response + '</p>';
-                }
+                        elem.innerHTML = '<p>' + response + '</p>';
+                        showElement('start_btn');
+                    }
                 makeAjax('get','stop/'+ taskId,'', callback);
             };
         </script>

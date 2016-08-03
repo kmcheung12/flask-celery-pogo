@@ -8,7 +8,7 @@ BASE_CONFIG = {
         "walk": 6.16,
         "debug": False,
         "test": False,
-        "initial_transfer": 0,
+        "initial_transfer": 50,
         "location_cache": False,
         "distance_unit": "km",
         "evolve_all": None,
@@ -18,13 +18,16 @@ BASE_CONFIG = {
 
 RELEASE_POKEMON = {
         "any": {
-            "release_under_cp": 400,
-            "release_under_iv": 0.9,
+            "release_under_cp": 200,
+            "release_under_iv": 0.8,
             "cp_iv_logic": "and"
             },
         "exceptions": {
             "always_capture": [
-                "Magikarp",
+                "Squirtle",
+                "Bulbasaur",
+                "Charmander",
+                "Pikachu",
                 "Arcanine",
                 "Lapras",
                 "Aerodactyl",

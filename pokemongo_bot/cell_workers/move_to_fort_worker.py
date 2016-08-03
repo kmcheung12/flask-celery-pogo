@@ -34,7 +34,7 @@ class MoveToFortWorker(object):
             self.api.player_update(latitude=lat, longitude=lng)
             response_dict = self.api.call()
             self.logger.info('[#] Arrived at Pokestop')
-            sleep(2)
+            sleep(1)
             return response_dict
 
         return None

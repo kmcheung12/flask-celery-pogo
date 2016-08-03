@@ -4,7 +4,7 @@ import json
 import time
 from math import radians, sqrt, sin, cos, atan2
 from pgoapi.utilities import f2i, h2f
-from utils import print_green, print_yellow, print_red, format_time
+from utils import  format_time
 from pokemongo_bot.human_behaviour import sleep
 
 
@@ -117,7 +117,7 @@ class SeenFortWorker(object):
                         format_time((pokestop_cooldown / 1000) -
                                     seconds_since_epoch)))
             elif spin_details['result'] == 4:
-                print_red("[#] Inventory is full, switching to catch mode...")
+                self.logger.info("[#] Inventory is full, switching to catch mode...")
                 self.config.mode = 'poke'
 
             if 'chain_hack_sequence_number' in response_dict['responses'][
@@ -126,7 +126,7 @@ class SeenFortWorker(object):
                 return response_dict['responses']['FORT_SEARCH'][
                     'chain_hack_sequence_number']
             else:
-                print_yellow('[#] may search too often, lets have a rest')
+                self.logger.info('[#] may search too often, lets have a rest')
                 return 11
         sleep(7)
         return 0
